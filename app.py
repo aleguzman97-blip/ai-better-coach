@@ -745,11 +745,11 @@ def build_conclusion(stats: dict, tab: str, goal: str) -> str:
     days_word = f"{'hoy' if n == 1 else f'los últimos {n} días'}"
 
     if tab == "readiness":
-        r = stats["readiness"]
-        sl = stats["sleep"]
-        rhr = stats["rhr"]
-        rd = stats["rhr_delta"]
-        conclusion = f"Tu score promedio esta semana fue <b>{r if r else '—'}/100</b>. "
+        r   = safe_num(stats["readiness"])
+        sl  = safe_num(stats["sleep"])
+        rhr = safe_num(stats["rhr"])
+        rd  = safe_num(stats["rhr_delta"])
+        conclusion = f"Tu score promedio esta semana fue <b>{r:.0f}/100</b>. " if r else "No hay suficientes datos de disposición esta semana. "
         if sl and sl < 7:
             conclusion += f"Dormiste un promedio de <b>{sl:.1f}h</b> — por debajo del umbral de recuperación óptima (7.5h+). "
         elif sl:
@@ -763,17 +763,20 @@ def build_conclusion(stats: dict, tab: str, goal: str) -> str:
                 conclusion += f"Tu FC reposo se mantuvo estable en <b>{rhr:.0f} bpm</b>."
 
     elif tab == "sleep":
-        sl   = stats["sleep"]
-        sd   = stats["sleep_delta"]
-        deep = stats["deep"]
-        dd   = stats["deep_delta"]
-        rem  = stats["rem"]
-        eff  = stats["sleep_eff"]
-        conclusion = f"Dormiste un promedio de <b>{sl:.1f}h</b> esta semana "
-        if sd and abs(sd) > 0.1:
-            conclusion += f"(<b>{a(sd)}{abs(sd):.1f}h</b> vs semana pasada). "
+        sl   = safe_num(stats["sleep"])
+        sd   = safe_num(stats["sleep_delta"])
+        deep = safe_num(stats["deep"])
+        dd   = safe_num(stats["deep_delta"])
+        rem  = safe_num(stats["rem"])
+        eff  = safe_num(stats["sleep_eff"])
+        if sl:
+            conclusion = f"Dormiste un promedio de <b>{sl:.1f}h</b> esta semana "
+            if sd and abs(sd) > 0.1:
+                conclusion += f"(<b>{a(sd)}{abs(sd):.1f}h</b> vs semana pasada). "
+            else:
+                conclusion += "(similar a la semana pasada). "
         else:
-            conclusion += "(similar a la semana pasada). "
+            conclusion = "No hay suficientes datos de sueño esta semana. "
         if deep:
             conclusion += f"Sueño profundo: <b>{deep:.1f}h</b>"
             if dd and dd < -0.2:
@@ -786,16 +789,19 @@ def build_conclusion(stats: dict, tab: str, goal: str) -> str:
             conclusion += f"Eficiencia del sueño: <b>{eff:.1f}%</b>{'  ✅' if eff >= 88 else ' — hay margen de mejora'}."
 
     elif tab == "load":
-        cal   = stats["cal"]
-        cd    = stats["cal_delta"]
-        steps = stats["steps"]
-        sd    = stats["steps_delta"]
-        rhr   = stats["rhr"]
-        rd    = stats["rhr_delta"]
-        conclusion = f"Promediaste <b>{cal:.0f} kcal activas/día</b> esta semana"
-        if cd and abs(cd) > 20:
-            conclusion += f" ({a(cd)}{abs(cd):.0f} kcal vs semana pasada)"
-        conclusion += f". Pasos: <b>{steps:.0f}/día</b>. "
+        cal   = safe_num(stats["cal"])
+        cd    = safe_num(stats["cal_delta"])
+        steps = safe_num(stats["steps"])
+        sd    = safe_num(stats["steps_delta"])
+        rhr   = safe_num(stats["rhr"])
+        rd    = safe_num(stats["rhr_delta"])
+        if cal and steps:
+            conclusion = f"Promediaste <b>{cal:.0f} kcal activas/día</b> esta semana"
+            if cd and abs(cd) > 20:
+                conclusion += f" ({a(cd)}{abs(cd):.0f} kcal vs semana pasada)"
+            conclusion += f". Pasos: <b>{steps:.0f}/día</b>. "
+        else:
+            conclusion = "No hay suficientes datos de actividad esta semana. "
         if rhr and rd:
             if rd > 3:
                 conclusion += f"⚠️ Tu FC reposo subió <b>{rd:.0f} bpm</b> — la carga puede estar superando tu recuperación."
@@ -805,9 +811,12 @@ def build_conclusion(stats: dict, tab: str, goal: str) -> str:
                 conclusion += "Tu FC reposo se mantuvo estable — buena señal de equilibrio entre carga y recuperación."
 
     elif tab == "energy":
-        sl  = stats["sleep"]
-        cal = stats["cal"]
-        conclusion = f"Esta semana, con <b>{sl:.1f}h de sueño promedio</b>, generaste <b>{cal:.0f} kcal activas/día</b>. "
+        sl  = safe_num(stats["sleep"])
+        cal = safe_num(stats["cal"])
+        if sl and cal:
+            conclusion = f"Esta semana, con <b>{sl:.1f}h de sueño promedio</b>, generaste <b>{cal:.0f} kcal activas/día</b>. "
+        else:
+            conclusion = "No hay suficientes datos esta semana para calcular esta correlación. "
         if sl and cal:
             if sl >= 7.5 and cal >= 400:
                 conclusion += "La correlación es positiva — tu sueño está traduciendo en energía real al día siguiente. Sigue así."
@@ -818,8 +827,8 @@ def build_conclusion(stats: dict, tab: str, goal: str) -> str:
 
     elif tab == "correlation":
         conclusion = "La matriz muestra cómo se relacionan tus variables esta semana. "
-        sl  = stats["sleep"]
-        rhr = stats["rhr"]
+        sl  = safe_num(stats["sleep"])
+        rhr = safe_num(stats["rhr"])
         if sl and rhr:
             conclusion += f"Con {sl:.1f}h de sueño y FC reposo de {rhr:.0f} bpm, "
             if sl >= 7.5 and rhr <= 65:
@@ -828,6 +837,8 @@ def build_conclusion(stats: dict, tab: str, goal: str) -> str:
                 conclusion += "hay margen de mejora en recuperación que el mapa de calor probablemente refleja."
             else:
                 conclusion += "estás en zona de equilibrio."
+        else:
+            conclusion += "Acumula más datos esta semana para ver patrones claros."
 
     return conclusion
 
